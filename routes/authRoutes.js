@@ -1,7 +1,7 @@
 const express = require("express");
 const passport = require("passport");
 const jwt = require("jsonwebtoken");
-const { register, login } = require("../controllers/authController");
+const { register, login, verifyOTP } = require("../controllers/authController");
 const auth = require("../middleware/authMiddleware");
 
 const router = express.Router();
@@ -9,6 +9,7 @@ const router = express.Router();
 // ================= LOCAL AUTH =================
 router.post("/register", register);
 router.post("/login", login);
+router.post("/verify-otp", verifyOTP);
 
 // ================= GOOGLE AUTH =================
 router.get(
