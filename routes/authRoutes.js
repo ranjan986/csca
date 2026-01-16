@@ -6,12 +6,12 @@ const auth = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// ================= LOCAL AUTH =================
+// Local Auth Routes
 router.post("/register", register);
 router.post("/login", login);
 router.post("/verify-otp", verifyOTP);
 
-// ================= GOOGLE AUTH =================
+// Google OAuth Routes
 router.get(
   "/google",
   passport.authenticate("google", {
@@ -45,7 +45,7 @@ router.get(
 
 // GET LOGGED IN USER 
 router.get("/me", auth, async (req, res) => {
-  // authMiddleware req.user set karta hai
+  
   res.json(req.user);
 });
 

@@ -9,7 +9,7 @@ exports.register = async (req, res) => {
   const { firstName, lastName, email, phone, password } = req.body;
 
   try {
-    // ✅ Normalize input
+    // Normalize input
     const cleanEmail = email?.trim() || undefined;
     const cleanPhone = phone?.trim() || undefined;
 
@@ -17,7 +17,7 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "Email or phone required" });
     }
 
-    // ✅ Build safe query
+    // Build safe query
     const orQuery = [];
     if (cleanEmail) orQuery.push({ email: cleanEmail });
     if (cleanPhone) orQuery.push({ phone: cleanPhone });
@@ -31,7 +31,7 @@ exports.register = async (req, res) => {
     const otp = generateOTP();
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Create user object safely
+    // Create user object safely
     const userData = {
       firstName,
       lastName,
@@ -45,7 +45,7 @@ exports.register = async (req, res) => {
 
     const user = await User.create(userData);
 
-    // ✅ Send OTP
+    // Send OTP
     if (cleanEmail) await sendEmail(cleanEmail, otp);
 
     res.status(201).json({
@@ -80,25 +80,36 @@ exports.verifyOTP = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
-exports.login = async (req, res) => {
+ // LOGIN
+ exports.login = async (req, res) => {
   const { identifier, password } = req.body;
 
   try {
+    if (!identifier || !password) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
+    const cleanIdentifier = identifier.trim().toLowerCase();
+
     const user = await User.findOne({
-      $or: [{ email: identifier }, { phone: identifier }]
+      $or: [
+        { email: cleanIdentifier },
+        { phone: cleanIdentifier }
+      ]
     });
 
-    if (!user)
+    if (!user) {
       return res.status(400).json({ message: "User not found" });
+    }
 
-    if (!user.isVerified)
+    if (!user.isVerified) {
       return res.status(403).json({ message: "Verify OTP first" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch)
+    if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const token = jwt.sign(
       { id: user._id },
@@ -111,12 +122,13 @@ exports.login = async (req, res) => {
       user: {
         id: user._id,
         firstName: user.firstName,
-        email: user.email,
-        phone: user.phone
+        email: user.email || null,
+        phone: user.phone || null
       }
     });
 
   } catch (err) {
+    console.error("LOGIN ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
