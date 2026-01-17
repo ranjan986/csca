@@ -29,8 +29,11 @@ exports.register = async (req, res) => {
       ].filter(Boolean),
     });
 
-    if (existingUser) {
+    if (existingUser && existingUser.isVerified === true) {
       return res.status(400).json({ message: "User already exists" });
+    }
+    else if (existingUser) {
+      await User.deleteOne({ _id: existingUser._id });
     }
 
     const otp = generateOTP();
