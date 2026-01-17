@@ -43,7 +43,7 @@ exports.register = async (req, res) => {
       phone: cleanPhone,
       password: hashedPassword,
       otp,
-      otpExpiry: Date.now() + 5 * 60 * 1000,
+      otpExpiry: Date.now() + 15 * 60 * 1000,
     });
 
     try {
