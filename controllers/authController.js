@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
       lastName,
       password: hashedPassword,
       otp,
-      otpExpiry: Date.now() + 10 * 60 * 1000 // 10 minutes
+      otpExpiry: Date.now() + 5 * 60 * 1000 // 5 minutes
     };
 
     if (cleanEmail) userData.email = cleanEmail;
