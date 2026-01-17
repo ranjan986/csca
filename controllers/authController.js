@@ -9,20 +9,25 @@ exports.register = async (req, res) => {
   const { firstName, lastName, email, phone, password } = req.body;
 
   try {
-    // Normalize input
-    const cleanEmail = email?.trim() || undefined;
-    const cleanPhone = phone?.trim() || undefined;
+    if (!firstName || !lastName || !password) {
+      return res.status(400).json({
+        message: "First name, last name and password are required"
+      });
+    }
+
+    const cleanEmail = email?.trim();
+    const cleanPhone = phone?.trim();
 
     if (!cleanEmail && !cleanPhone) {
       return res.status(400).json({ message: "Email or phone required" });
     }
 
-    // Build safe query
-    const orQuery = [];
-    if (cleanEmail) orQuery.push({ email: cleanEmail });
-    if (cleanPhone) orQuery.push({ phone: cleanPhone });
-
-    const existingUser = await User.findOne({ $or: orQuery });
+    const existingUser = await User.findOne({
+      $or: [
+        cleanEmail ? { email: cleanEmail } : null,
+        cleanPhone ? { phone: cleanPhone } : null,
+      ].filter(Boolean),
+    });
 
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
@@ -31,33 +36,33 @@ exports.register = async (req, res) => {
     const otp = generateOTP();
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user object safely
-    const userData = {
+    const user = await User.create({
       firstName,
       lastName,
+      email: cleanEmail,
+      phone: cleanPhone,
       password: hashedPassword,
       otp,
-      otpExpiry: Date.now() + 5 * 60 * 1000 // 5 minutes
-    };
+      otpExpiry: Date.now() + 5 * 60 * 1000,
+    });
 
-    if (cleanEmail) userData.email = cleanEmail;
-    if (cleanPhone) userData.phone = cleanPhone;
-
-    const user = await User.create(userData);
-
-    // Send OTP
-    if (cleanEmail) await sendEmail(cleanEmail, otp);
+    try {
+      if (cleanEmail) await sendEmail(cleanEmail, otp);
+    } catch (e) {
+      console.error("EMAIL OTP FAILED:", e.message);
+    }
 
     res.status(201).json({
       message: "OTP sent successfully",
-      userId: user._id
+      userId: user._id,
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("REGISTER ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 exports.verifyOTP = async (req, res) => {
   const { userId, otp } = req.body;
