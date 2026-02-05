@@ -101,14 +101,15 @@ router.post("/verify-login-otp", async (req, res) => {
 
 router.post("/google-login", async (req, res) => {
   try {
-    const { email, name, avatar, uid } = req.body;
+    const { email, firstName, lastName, avatar, uid } = req.body;
 
     let user = await User.findOne({ email });
 
     if (!user) {
       // Create new user if not exists
       user = await User.create({
-        name,
+        firstName,
+        lastName,
         email,
         avatar,
         googleUid: uid, // Optional: add to schema if needed
@@ -124,14 +125,12 @@ router.post("/google-login", async (req, res) => {
       token,
       user: {
         id: user._id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         phone: user.phone,
         avatar: user.avatar,
         preferredLanguage: user.preferredLanguage,
-        friends: user.friends,
-        points: user.points,
-        subscription: user.subscription
       }
     });
   } catch (err) {

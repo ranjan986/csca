@@ -1,34 +1,39 @@
-import nodemailer from "nodemailer";
+import axios from "axios";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
 export const sendEmail = async (to, subject, text) => {
     try {
-        if (!process.env.EMAIL || !process.env.EMAIL_PASS) {
-            console.log("Mock Email Send (Missing Credentials):");
+        const serviceId = process.env.EMAILJS_SERVICE_ID;
+        const templateId = process.env.EMAILJS_TEMPLATE_ID;
+        const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+        const privateKey = process.env.EMAILJS_PRIVATE_KEY;
+
+        if (!serviceId || !templateId || !publicKey || !privateKey) {
+            console.log("Mock Email Send (Missing EmailJS Credentials):");
             console.log(`To: ${to}`);
             console.log(`Subject: ${subject}`);
             console.log(`Body: ${text}`);
             return;
         }
 
-        await transporter.sendMail({
-            from: process.env.EMAIL,
-            to,
-            subject,
-            text,
-        });
-        console.log(`Email sent to ${to}`);
+        const data = {
+            service_id: serviceId,
+            template_id: templateId,
+            user_id: publicKey,
+            accessToken: privateKey,
+            template_params: {
+                to_email: to,
+                subject: subject,
+                message: text, // Assuming your template uses {{message}}
+            }
+        };
+
+        await axios.post('https://api.emailjs.com/api/v1.0/email/send', data);
+        console.log(`Email sent successfully via EmailJS to ${to}`);
+
     } catch (err) {
-        console.error("Email send failed:", err);
+        console.error("EmailJS send failed:", err.response ? err.response.data : err.message);
     }
 };
