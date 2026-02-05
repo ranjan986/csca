@@ -20,6 +20,11 @@ router.post("/login",
     });
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Guard: Check if user has a password (Google Login users might not)
+    if (!user.password) {
+      return res.status(400).json({ message: "This account uses Google Login. Please login with Google or use Forgot Password to set a password." });
+    }
+
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Invalid credentials" });
 
