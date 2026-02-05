@@ -36,15 +36,20 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const { email, phone } = req.body;
 
-    if (!email && !phone) {
-      return res.status(400).json({
-        message: "Provide email or phone number",
-      });
+    console.log("Forgot Password Request:", { email, phone });
+
+    let query = {};
+    if (email) {
+      // Case-insensitive search
+      query.email = { $regex: new RegExp(`^${email}$`, 'i') };
+    } else if (phone) {
+      query.phone = phone;
+    } else {
+      return res.status(400).json({ message: "Provide email or phone number" });
     }
 
-    const user = await User.findOne({
-      $or: [{ email }, { phone }],
-    });
+    const user = await User.findOne(query);
+    console.log("User search result:", user ? "Found" : "Not Found");
 
     if (!user) {
       return res.status(404).json({
