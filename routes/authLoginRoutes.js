@@ -15,9 +15,14 @@ router.post("/login",
 
     const { identifier, password } = req.body;
 
-    const user = await User.findOne({
-      $or: [{ email: identifier }, { phone: identifier }]
-    });
+    let query = {};
+    if (identifier.includes('@')) {
+      query.email = { $regex: new RegExp(`^${identifier}$`, 'i') };
+    } else {
+      query.phone = identifier;
+    }
+
+    const user = await User.findOne(query);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Guard: Check if user has a password (Google Login users might not)
