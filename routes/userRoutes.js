@@ -1,6 +1,7 @@
 import express from "express";
 import User from "../models/User.js";
 import authMiddleware from "../middleware/authMiddleware.js";
+import bcrypt from "bcryptjs";
 
 import adminMiddleware from "../middleware/adminMiddleware.js";
 
@@ -58,6 +59,38 @@ router.delete("/avatar", authMiddleware, async (req, res) => {
         await user.save();
 
         res.json({ message: "Avatar removed successfully", user });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Change Password
+router.put("/change-password", authMiddleware, async (req, res) => {
+    try {
+        const { oldPassword, newPassword } = req.body;
+        const user = await User.findById(req.user.id);
+
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        // If user has no password (e.g. Google Login)
+        if (!user.password) {
+            return res.status(400).json({ message: "You are logged in via Google. Please use 'Forgot Password' to set a new password." });
+        }
+
+        // Verify old password
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Incorrect old password" });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+
+        await user.save();
+
+        res.json({ message: "Password updated successfully" });
+
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
