@@ -45,7 +45,7 @@ app.use(cors({
 }));
 
 // Body Parser
-app.use(express.json({ limit: '10kb' })); // Limit body size
+app.use(express.json({ limit: '50mb' })); // Limit body size
 
 // Data Sanitization against NoSQL query injection
 app.use(mongoSanitize());

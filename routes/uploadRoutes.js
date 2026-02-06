@@ -24,14 +24,14 @@ const storage = new CloudinaryStorage({
         return {
             folder: "csca-platform-uploads",
             resource_type: isVideo ? "video" : "image",
-            allowed_formats: ["jpg", "png", "jpeg", "mp4", "mov", "webm", "mkv"],
+            allowed_formats: ["jpg", "png", "jpeg", "heic", "heif", "webp", "mp4", "mov", "webm", "mkv"],
         };
     },
 });
 
 const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+    limits: { fileSize: 25 * 1024 * 1024 } // 25MB limit (increased for mobile uploads)
 });
 
 router.post("/", upload.single("file"), (req, res) => {
