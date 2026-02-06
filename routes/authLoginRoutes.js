@@ -108,24 +108,43 @@ router.post("/verify-login-otp", async (req, res) => {
 
 router.post("/google-login", async (req, res) => {
   try {
-    const { email, firstName, lastName, avatar, uid } = req.body;
+    const { email, firstName, lastName, avatar, uid, name } = req.body;
+
+    let finalFirstName = firstName;
+    let finalLastName = lastName;
+
+    // Logic to handle "name" being sent instead of first/last name (common on mobile/some flows)
+    if (!finalFirstName && name) {
+      const parts = name.trim().split(" ");
+      finalFirstName = parts[0];
+      finalLastName = parts.slice(1).join(" ") || "";
+    }
 
     let user = await User.findOne({ email });
 
     if (!user) {
       // Create new user if not exists
       user = await User.create({
-        firstName,
-        lastName,
+        firstName: finalFirstName,
+        lastName: finalLastName,
         email,
         avatar,
         googleUid: uid,
       });
     } else {
-      // Update existing user with latest Google info
-      user.firstName = firstName || user.firstName;
-      user.lastName = lastName || user.lastName;
-      user.avatar = avatar || user.avatar;
+      // Update existing user with latest Google info ONLY if fields are missing
+      // This prevents overwriting manually changed names
+      if (!user.firstName && finalFirstName) {
+        user.firstName = finalFirstName;
+      }
+      if (!user.lastName && finalLastName) {
+        user.lastName = finalLastName;
+      }
+
+      // Only update avatar if user doesn't have one (prevents overwriting custom uploads)
+      if (!user.avatar && avatar) {
+        user.avatar = avatar;
+      }
       user.googleUid = uid || user.googleUid;
       await user.save();
     }
