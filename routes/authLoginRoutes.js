@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { detectClient } from "../middleware/detectClient.js";
 import { sendEmailOtp } from "../utils/sendEmailOtp.js";
 import { generateOtp } from "../utils/generateOtp.js";
+import protect from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -13,7 +14,14 @@ router.post("/login",
 
   async (req, res) => {
 
-    const { identifier, password } = req.body;
+    let { identifier, password, email } = req.body;
+
+    // Support email as alias for identifier
+    identifier = identifier || email;
+
+    if (!identifier || !password) {
+      return res.status(400).json({ message: "Please provide email/phone and password" });
+    }
 
     let query = {};
     if (identifier.includes('@')) {
@@ -33,18 +41,7 @@ router.post("/login",
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Invalid credentials" });
 
-    const browser = req.clientInfo.browser;
 
-    // Chrome → Email OTP
-    if (browser && browser.includes("Chrome")) {
-      const otp = generateOtp();
-      user.loginOtp = otp;
-      await user.save();
-
-      await sendEmailOtp(user.email, otp);
-
-      return res.json({ message: "OTP sent to email for verification" });
-    }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "30d",
@@ -122,8 +119,15 @@ router.post("/google-login", async (req, res) => {
         lastName,
         email,
         avatar,
-        googleUid: uid, // Optional: add to schema if needed
+        googleUid: uid,
       });
+    } else {
+      // Update existing user with latest Google info
+      user.firstName = firstName || user.firstName;
+      user.lastName = lastName || user.lastName;
+      user.avatar = avatar || user.avatar;
+      user.googleUid = uid || user.googleUid;
+      await user.save();
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
@@ -145,6 +149,33 @@ router.post("/google-login", async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+router.get("/me", protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({
+      status: "success",
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        preferredLanguage: user.preferredLanguage,
+        friends: user.friends,
+        points: user.points,
+        subscription: user.subscription
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
   }
 });
 

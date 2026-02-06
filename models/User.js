@@ -8,6 +8,11 @@ const userSchema = new mongoose.Schema({
   password: String,
   avatar: String,
   googleUid: String,
+  role: {
+    type: String,
+    enum: ["user", "admin"],
+    default: "user",
+  },
 
   forgotPasswordUsedAt: {
     type: Date,

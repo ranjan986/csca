@@ -2,7 +2,19 @@ import express from "express";
 import User from "../models/User.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
+import adminMiddleware from "../middleware/adminMiddleware.js";
+
 const router = express.Router();
+
+// Get All Users (Admin)
+router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const users = await User.find().select("-password");
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
 // Update Profile (Name, Avatar)
 router.put("/update", authMiddleware, async (req, res) => {
