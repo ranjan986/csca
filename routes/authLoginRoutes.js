@@ -59,7 +59,8 @@ router.post("/login",
         preferredLanguage: user.preferredLanguage,
         friends: user.friends,
         points: user.points,
-        subscription: user.subscription
+        subscription: user.subscription,
+        role: user.role
       }
     });
   }
@@ -101,7 +102,8 @@ router.post("/verify-login-otp", async (req, res) => {
       preferredLanguage: user.preferredLanguage,
       friends: user.friends,
       points: user.points,
-      subscription: user.subscription
+      subscription: user.subscription,
+      role: user.role
     }
   });
 });
@@ -164,6 +166,7 @@ router.post("/google-login", async (req, res) => {
         phone: user.phone,
         avatar: user.avatar,
         preferredLanguage: user.preferredLanguage,
+        role: user.role
       }
     });
   } catch (err) {
@@ -190,7 +193,8 @@ router.get("/me", protect, async (req, res) => {
         preferredLanguage: user.preferredLanguage,
         friends: user.friends,
         points: user.points,
-        subscription: user.subscription
+        subscription: user.subscription,
+        role: user.role
       }
     });
   } catch (error) {

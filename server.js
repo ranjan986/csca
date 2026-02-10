@@ -13,6 +13,7 @@ import authLoginRoutes from "./routes/authLoginRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import examRoutes from "./routes/examRoutes.js";
+import resultRoutes from "./routes/resultRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -62,6 +63,7 @@ app.use("/api/auth", authLoginRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/exams", examRoutes);
+app.use("/api/results", resultRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
