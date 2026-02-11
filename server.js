@@ -39,9 +39,29 @@ const limiter = rateLimit({
 app.use("/api", limiter);
 
 // CORS Config
+// CORS Config
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:5000",
+    process.env.CLIENT_URL, // Production Frontend URL from Render Env
+    "https://csca.onrender.com",
+    "https://cscas.vercel.app"
+].filter(Boolean); // Remove undefined/null values
+
 app.use(cors({
-    origin: "*", // Replace with specific frontend URL in production
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, or Postman)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.some(o => origin.startsWith(o))) {
+            return callback(null, true);
+        } else {
+            console.log("Blocked by CORS:", origin);
+            var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+    },
     credentials: true
 }));
 

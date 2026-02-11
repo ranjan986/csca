@@ -41,6 +41,13 @@ router.post("/login",
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Invalid credentials" });
 
+    // Auto-promote if in ADMIN_EMAILS
+    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim()) : [];
+    if (adminEmails.includes(user.email) && user.role !== 'admin') {
+      user.role = 'admin';
+      await user.save();
+    }
+
 
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
@@ -126,12 +133,16 @@ router.post("/google-login", async (req, res) => {
 
     if (!user) {
       // Create new user if not exists
+      const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim()) : [];
+      const role = adminEmails.includes(email) ? 'admin' : 'user';
+
       user = await User.create({
         firstName: finalFirstName,
         lastName: finalLastName,
         email,
         avatar,
         googleUid: uid,
+        role
       });
     } else {
       // Update existing user with latest Google info ONLY if fields are missing
@@ -148,6 +159,13 @@ router.post("/google-login", async (req, res) => {
         user.avatar = avatar;
       }
       user.googleUid = uid || user.googleUid;
+
+      // Auto-promote if in ADMIN_EMAILS
+      const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim()) : [];
+      if (adminEmails.includes(email) && user.role !== 'admin') {
+        user.role = 'admin';
+      }
+
       await user.save();
     }
 
