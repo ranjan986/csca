@@ -1,20 +1,13 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
-import validator from "validator";
+
 
 const userSchema = new mongoose.Schema(
   {
-    firstName: {
+    name: {
       type: String,
       required: true,
       trim: true,
       minlength: 2,
-      maxlength: 50,
-    },
-
-    lastName: {
-      type: String,
-      trim: true,
       maxlength: 50,
     },
 
@@ -24,7 +17,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      validate: [validator.isEmail, "Invalid email address"],
+
       index: true,
     },
 
@@ -47,6 +40,7 @@ const userSchema = new mongoose.Schema(
     avatar: {
       type: String,
       default: null,
+      required: false,
     },
 
     googleUid: {
