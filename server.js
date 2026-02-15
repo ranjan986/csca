@@ -25,7 +25,12 @@ app.use(helmet({
     contentSecurityPolicy: {
         useDefaults: true,
         directives: {
+            "default-src": ["'self'"],
+            "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://apis.google.com", "https://accounts.google.com", "https://*.firebaseapp.com"],
+            "connect-src": ["'self'", "https://accounts.google.com", "https://*.googleapis.com", "https://*.firebaseio.com", "https://*.firebaseapp.com"],
             "img-src": ["'self'", "data:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
+            "frame-src": ["'self'", "https://accounts.google.com", "https://*.firebaseapp.com"],
+            "style-src": ["'self'", "'unsafe-inline'"],
         }
     },
     crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
