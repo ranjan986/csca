@@ -86,7 +86,7 @@ router.delete("/avatar", authMiddleware, async (req, res) => {
 router.put("/change-password", authMiddleware, async (req, res) => {
     try {
         const { oldPassword, newPassword } = req.body;
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('+password');
 
         if (!user) return res.status(404).json({ message: "User not found" });
 

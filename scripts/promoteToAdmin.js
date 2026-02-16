@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import User from '../models/User.js';
 
-dotenv.config({ path: './backend/.env' });
+dotenv.config({ path: './.env' });
 
 const promoteUser = async () => {
     try {
