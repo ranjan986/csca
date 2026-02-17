@@ -54,9 +54,15 @@ router.post("/login",
       expiresIn: "30d",
     });
 
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // true in production
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // essential for cross-site cookie
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
     res.json({
       message: "Login successful",
-      token,
       user: {
         id: user._id,
         name: user.name,
@@ -97,9 +103,15 @@ router.post("/verify-login-otp", async (req, res) => {
     expiresIn: "30d",
   });
 
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000
+  });
+
   res.json({
     message: "Login successful after OTP",
-    token,
     user: {
       id: user._id,
       name: user.name,
@@ -168,9 +180,15 @@ router.post("/google-login", async (req, res) => {
       expiresIn: "30d",
     });
 
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    });
+
     res.json({
       message: "Google Login successful",
-      token,
       user: {
         id: user._id,
         name: user.name,
@@ -185,6 +203,15 @@ router.post("/google-login", async (req, res) => {
     console.error("Google Login Error:", err);
     res.status(500).json({ message: err.message });
   }
+});
+
+router.post("/logout", (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+  });
+  res.json({ message: "Logged out successfully" });
 });
 
 router.get("/me", protect, async (req, res) => {
