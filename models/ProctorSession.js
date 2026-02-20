@@ -15,6 +15,22 @@ const proctorSessionSchema = new mongoose.Schema({
         type: String, // Base64 string
         required: true
     },
+    idSnapshot: {
+        type: String, // Base64 string of student ID
+        required: false
+    },
+    verificationStatus: {
+        type: String,
+        enum: ['pending', 'verified', 'rejected'],
+        default: 'pending'
+    },
+    messages: [
+        {
+            sender: String, // 'student' or 'proctor'
+            text: String,
+            timestamp: { type: Date, default: Date.now }
+        }
+    ],
     lastUpdated: {
         type: Date,
         default: Date.now
