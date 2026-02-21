@@ -8,16 +8,16 @@ const router = express.Router();
 // Upload Snapshot
 router.post('/upload-snapshot', authMiddleware, async (req, res) => {
     try {
-        const { examId, snapshot } = req.body;
+        const { examId, attemptId, snapshot } = req.body;
         const userId = req.user.id;
 
-        if (!examId || !snapshot) {
-            return res.status(400).json({ message: 'Missing examId or snapshot' });
+        if (!examId || !attemptId || !snapshot) {
+            return res.status(400).json({ message: 'Missing examId, attemptId or snapshot' });
         }
 
         // upsert: true -> create if not exists, update if exists
         const session = await ProctorSession.findOneAndUpdate(
-            { userId, examId },
+            { userId, examId, attemptId },
             { lastSnapshot: snapshot, lastUpdated: Date.now() },
             { new: true, upsert: true }
         );
@@ -48,16 +48,16 @@ router.get('/exam/:examId', authMiddleware, async (req, res) => {
 // Upload ID Snapshot
 router.post('/upload-id', authMiddleware, async (req, res) => {
     try {
-        const { examId, idSnapshot } = req.body;
+        const { examId, attemptId, idSnapshot, kycData } = req.body;
         const userId = req.user.id;
 
-        if (!examId || !idSnapshot) {
-            return res.status(400).json({ message: 'Missing examId or idSnapshot' });
+        if (!examId || !attemptId || !idSnapshot) {
+            return res.status(400).json({ message: 'Missing examId, attemptId or idSnapshot' });
         }
 
         const session = await ProctorSession.findOneAndUpdate(
-            { userId, examId },
-            { idSnapshot, verificationStatus: 'pending', lastUpdated: Date.now() },
+            { userId, examId, attemptId },
+            { idSnapshot, kycData, verificationStatus: 'pending', lastUpdated: Date.now() },
             { new: true, upsert: true }
         );
 
@@ -89,7 +89,8 @@ router.patch('/verify-id', authMiddleware, async (req, res) => {
 
         // Notify Student via Socket.io
         const io = req.app.get('io');
-        const room = `${session.examId}_${session.userId}`;
+        const room = `${session.examId.toString()}_${session.userId.toString()}_${session.attemptId}`;
+        console.log(`[Backend] Emitting verification_updated to room: ${room} with status: ${status}`);
         io.to(room).emit('verification_updated', { status });
 
         res.status(200).json({ message: `ID ${status}`, session });
@@ -100,11 +101,12 @@ router.patch('/verify-id', authMiddleware, async (req, res) => {
 });
 
 // Get My Session (Student)
-router.get('/my-session/:examId', authMiddleware, async (req, res) => {
+router.get('/my-session/:examId/:attemptId', authMiddleware, async (req, res) => {
     try {
         const session = await ProctorSession.findOne({
             userId: req.user.id,
-            examId: req.params.examId
+            examId: req.params.examId,
+            attemptId: req.params.attemptId
         });
         res.status(200).json(session);
     } catch (error) {

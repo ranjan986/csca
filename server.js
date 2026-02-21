@@ -55,8 +55,8 @@ app.use("/api/proctor", proctorRoutes);
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    socket.on("join_session", ({ examId, userId }) => {
-        const room = `${examId}_${userId}`;
+    socket.on("join_session", ({ examId, userId, attemptId }) => {
+        const room = attemptId ? `${examId}_${userId}_${attemptId}` : `${examId}_${userId}`;
         socket.join(room);
         console.log(`[Socket] User ${userId} joined room ${room}`);
     });
@@ -69,22 +69,43 @@ io.on("connection", (socket) => {
 
     socket.on("send_warning", (data) => {
         const { room, message } = data;
+        console.log(`[Socket] Relaying warning to room ${room}: ${message}`);
         io.to(room).emit("proctor_warning", { message });
-        console.log(`[Socket] Warning in room ${room}: ${message}`);
     });
 
     socket.on("disqualify_student", (data) => {
         const { room, reason } = data;
+        console.log(`[Socket] Relaying disqualification to room ${room}: ${reason}`);
         io.to(room).emit("disqualify_student", { reason });
-        console.log(`[Socket] Disqualified student in room ${room} for: ${reason}`);
     });
 
     // WebRTC Signaling
     socket.on("webrtc-signal", (data) => {
-        const { room, signal, type } = data;
-        // Broadcast to the other person in the room
-        socket.to(room).emit("webrtc-signal", { signal, type, sender: socket.id });
-        console.log(`[Socket] WebRTC ${type} signal in room ${room}`);
+        const { room } = data;
+        // Broadcast the entire data object to the other person in the room
+        socket.to(room).emit("webrtc-signal", data);
+        console.log(`[Socket] WebRTC signal in room ${room}`);
+    });
+
+    socket.on("webrtc-screen-signal", (data) => {
+        const { room } = data;
+        // Broadcast screen share signals
+        socket.to(room).emit("webrtc-screen-signal", data);
+        console.log(`[Socket] WebRTC screen signal in room ${room}`);
+    });
+
+    socket.on("noise_alert", (data) => {
+        const { room, level } = data;
+        // Relay noise alert to the proctor
+        socket.to(room).emit("noise_alert", { level, room });
+        console.log(`[Socket] Noise alert in room ${room}: ${level}`);
+    });
+
+    socket.on("request_live_feed", (data) => {
+        const { room } = data;
+        // Broadcast to student to re-initiate signaling
+        socket.to(room).emit("request_live_feed", data);
+        console.log(`[Socket] Live feed requested in room ${room}`);
     });
 
     socket.on("disconnect", () => {

@@ -11,6 +11,10 @@ const proctorSessionSchema = new mongoose.Schema({
         ref: 'Exam',
         required: true
     },
+    attemptId: {
+        type: String,
+        required: true
+    },
     lastSnapshot: {
         type: String, // Base64 string
         required: true
@@ -23,6 +27,11 @@ const proctorSessionSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'verified', 'rejected'],
         default: 'pending'
+    },
+    kycData: {
+        idType: String,
+        idNumber: String,
+        fullName: String
     },
     messages: [
         {
@@ -37,8 +46,8 @@ const proctorSessionSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Ensure we can quickly find the session for a user in an exam
-proctorSessionSchema.index({ userId: 1, examId: 1 }, { unique: true });
+// Ensure we can quickly find a specific attempt session
+proctorSessionSchema.index({ userId: 1, examId: 1, attemptId: 1 }, { unique: true });
 
 const ProctorSession = mongoose.model('ProctorSession', proctorSessionSchema);
 export default ProctorSession;
