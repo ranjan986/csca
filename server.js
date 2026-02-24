@@ -13,6 +13,7 @@ import userRoutes from "./routes/userRoutes.js";
 import examRoutes from "./routes/examRoutes.js";
 import resultRoutes from "./routes/resultRoutes.js";
 import proctorRoutes from "./routes/proctorRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 import { Server } from "socket.io";
 import http from "http";
 
@@ -50,6 +51,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/exams", examRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/proctor", proctorRoutes);
+app.use("/api/payment", paymentRoutes);
 
 // Socket.io Logic
 io.on("connection", (socket) => {
