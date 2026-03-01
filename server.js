@@ -14,6 +14,8 @@ import examRoutes from "./routes/examRoutes.js";
 import resultRoutes from "./routes/resultRoutes.js";
 import proctorRoutes from "./routes/proctorRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import courseRoutes from "./routes/courseRoutes.js";
+import liveClassRoutes from "./routes/liveClassRoutes.js";
 import { Server } from "socket.io";
 import http from "http";
 
@@ -52,6 +54,8 @@ app.use("/api/exams", examRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/proctor", proctorRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/live-class", liveClassRoutes);
 
 // Socket.io Logic
 io.on("connection", (socket) => {
@@ -61,6 +65,12 @@ io.on("connection", (socket) => {
         const room = attemptId ? `${examId}_${userId}_${attemptId}` : `${examId}_${userId}`;
         socket.join(room);
         console.log(`[Socket] User ${userId} joined room ${room}`);
+    });
+
+    // Student joins a course room to receive live class events
+    socket.on("join_course", ({ courseId }) => {
+        socket.join(`course_${courseId}`);
+        console.log(`[Socket] Socket ${socket.id} joined course room course_${courseId}`);
     });
 
     socket.on("send_message", (data) => {

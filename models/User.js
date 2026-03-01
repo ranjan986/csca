@@ -3,7 +3,15 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
+    firstName: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 2,
+      maxlength: 50,
+    },
+
+    lastName: {
       type: String,
       required: true,
       trim: true,
@@ -33,7 +41,16 @@ const userSchema = new mongoose.Schema(
       required: function () {
         return !this.googleUid;
       },
-      minlength: 8,
+      validate: {
+        validator: function (v) {
+
+          if (!this.googleUid && v && v.length < 8) {
+            return false;
+          }
+          return true;
+        },
+        message: "Password must be at least 8 characters long",
+      },
       select: false, // 🔥 Never return password
     },
 

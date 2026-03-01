@@ -1,8 +1,9 @@
 import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
 import dotenv from "dotenv";
+import fs from "fs";
+import { uploadFile } from "../controllers/uploadController.js";
 
 dotenv.config();
 
@@ -15,35 +16,27 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Config Storage (Auto detects image vs video)
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: async (req, file) => {
-        // Explicitly set resource_type for videos, otherwise 'auto' or 'image'
-        const isVideo = file.mimetype.startsWith('video');
-        return {
-            folder: "csca-platform-uploads",
-            resource_type: isVideo ? "video" : "image",
-            allowed_formats: ["jpg", "png", "jpeg", "heic", "heif", "webp", "mp4", "mov", "webm", "mkv"],
-        };
+// Ensure uploads directory exists
+const uploadDir = "uploads";
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+
+// Multer Disk Storage for temporary files
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
     },
 });
 
 const upload = multer({
     storage,
-    limits: { fileSize: 25 * 1024 * 1024 } // 25MB limit (increased for mobile uploads)
+    limits: { fileSize: 500 * 1024 * 1024 } // 500MB limit
 });
 
-router.post("/", upload.single("file"), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-    }
-
-    // Cloudinary returns the path in user-friendly way
-    res.json({
-        url: req.file.path,
-        type: req.file.mimetype.startsWith("video") ? "video" : "image",
-    });
-});
+router.post("/", upload.single("file"), uploadFile);
 
 export default router;
