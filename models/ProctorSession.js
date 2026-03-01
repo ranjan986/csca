@@ -17,7 +17,7 @@ const proctorSessionSchema = new mongoose.Schema({
     },
     lastSnapshot: {
         type: String, // Base64 string
-        required: true
+        required: false
     },
     idSnapshot: {
         type: String, // Base64 string of student ID
