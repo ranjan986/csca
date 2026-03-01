@@ -16,6 +16,7 @@ import proctorRoutes from "./routes/proctorRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import liveClassRoutes from "./routes/liveClassRoutes.js";
+import certificationRoutes from "./routes/certificationRoutes.js";
 import { Server } from "socket.io";
 import http from "http";
 
@@ -64,6 +65,7 @@ app.use("/api/proctor", proctorRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/live-class", liveClassRoutes);
+app.use("/api/certifications", certificationRoutes);
 
 // Socket.io Logic
 io.on("connection", (socket) => {
@@ -121,6 +123,13 @@ io.on("connection", (socket) => {
         console.log(`[Socket] Noise alert in room ${room}: ${level}`);
     });
 
+    socket.on("tab_switch_alert", (data) => {
+        const { room, userId } = data;
+        // Relay tab switch alert to the proctor
+        socket.to(room).emit("tab_switch_alert", { userId, room });
+        console.log(`[Socket] Tab switch alert in room ${room} for user ${userId}`);
+    });
+
     socket.on("request_live_feed", (data) => {
         const { room } = data;
         // Broadcast to student to re-initiate signaling
@@ -134,4 +143,13 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
+server.on('error', (e) => {
+    if (e.code === 'EADDRINUSE') {
+        console.error(`[Fatal] Port ${PORT} is already in use.`);
+        console.log("Try running: netstat -ano | findstr :5000 followed by taskkill /PID <PID> /F");
+        process.exit(1);
+    }
+});
+
 server.listen(PORT, () => console.log(`Server running on port ${PORT} with Sockets`));

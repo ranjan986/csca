@@ -167,8 +167,8 @@ export const loginUser = async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // true in production
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // essential for cross-site cookie
+            secure: true, // Always true for cross-site cookie in modern browsers
+            sameSite: 'none', // Required for cross-site cookie (Vercel -> Render)
             maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
         });
 
@@ -215,8 +215,8 @@ export const verifyLoginOtp = async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            secure: true,
+            sameSite: 'none',
             maxAge: 30 * 24 * 60 * 60 * 1000
         });
 
@@ -304,8 +304,8 @@ export const googleLogin = async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            secure: true,
+            sameSite: 'none',
             maxAge: 30 * 24 * 60 * 60 * 1000
         });
 
@@ -331,8 +331,8 @@ export const googleLogin = async (req, res) => {
 export const logoutUser = (req, res) => {
     res.clearCookie('token', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+        secure: true,
+        sameSite: 'none'
     });
     res.json({ message: "Logged out successfully" });
 };

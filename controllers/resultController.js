@@ -1,5 +1,6 @@
 import Exam from "../models/Exam.js";
 import Result from "../models/Result.js";
+import User from "../models/User.js";
 
 // @route   GET /api/results/all
 // @desc    Get all exam results (Admin only)
@@ -128,6 +129,39 @@ export const updateResult = async (req, res) => {
 
         await result.save();
         res.json(result);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// @route   GET /api/results/:id/certificate
+// @desc    Get certificate data for a passed result
+// @access  Private
+export const getCertificateData = async (req, res) => {
+    try {
+        const result = await Result.findById(req.params.id).populate('user', 'firstName lastName email');
+
+        if (!result) return res.status(404).json({ message: "Result not found" });
+
+        // Ensure user can only access their own certificate
+        if (result.user._id.toString() !== req.user.id.toString()) {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+
+        if (result.status !== 'Pass') {
+            return res.status(400).json({ message: "Certificate only available for passed exams" });
+        }
+
+        res.json({
+            certificateId: result._id,
+            userName: `${result.user.firstName} ${result.user.lastName}`,
+            examTitle: result.examTitle,
+            score: result.score,
+            totalMarks: result.totalMarks,
+            percentage: Math.round(result.percentage),
+            status: result.status,
+            completedAt: result.completedAt,
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
