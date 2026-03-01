@@ -33,11 +33,19 @@ const io = new Server(server, {
 });
 
 app.set('io', io);
+app.set("trust proxy", 1); // Trust first proxy (Render) for secure cookies
 
 app.use(cookieParser());
 
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://cscas.vercel.app",
+    /\.vercel\.app$/
+];
+
 app.use(cors({
-    origin: ["http://localhost:5173", "http://localhost:3000", "https://cscas.vercel.app", /\.vercel\.app$/],
+    origin: allowedOrigins,
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true
 }));
