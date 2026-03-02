@@ -18,9 +18,17 @@ const authMiddleware = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select("-password");
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) {
+      console.warn(`[Auth] User ID ${decoded.id} from token not found in database.`);
+      return res.status(401).json({ message: "User no longer exists" });
+    }
+
+    req.user = user;
     next();
   } catch (err) {
+    console.error('[Auth] Token verification failed:', err.message);
     res.status(401).json({ message: "Token invalid" });
   }
 };

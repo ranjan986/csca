@@ -56,7 +56,8 @@ app.use(cors({
 }));
 
 // Body Parser
-app.use(express.json({ limit: '50mb' })); // Limit body size
+app.use(express.json({ limit: '100mb' })); // Increase limit for high-res snapshots
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -158,6 +159,17 @@ server.on('error', (e) => {
         console.log("Try running: netstat -ano | findstr :5000 followed by taskkill /PID <PID> /F");
         process.exit(1);
     }
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error('[Global Error]', {
+        message: err.message,
+        stack: err.stack,
+        path: req.path,
+        method: req.method
+    });
+    res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT} with Sockets`));

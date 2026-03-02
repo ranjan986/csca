@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import ProctorSession from '../models/ProctorSession.js';
 
 // Upload Snapshot
@@ -6,21 +7,28 @@ export const uploadSnapshot = async (req, res) => {
         const { examId, attemptId, snapshot } = req.body;
         const userId = req.user.id;
 
+        console.log(`[Proctor] Receiving snapshot for exam: ${examId}, attempt: ${attemptId}, user: ${userId}`);
+
         if (!examId || !attemptId || !snapshot) {
+            console.error('[Proctor] Upload failed: Missing required fields', { examId, attemptId, snapshot: !!snapshot });
             return res.status(400).json({ message: 'Missing examId, attemptId or snapshot' });
         }
 
         // upsert: true -> create if not exists, update if exists
         const session = await ProctorSession.findOneAndUpdate(
-            { userId, examId, attemptId },
+            { userId: req.user._id, examId, attemptId },
             { lastSnapshot: snapshot, lastUpdated: Date.now() },
-            { new: true, upsert: true }
+            { new: true, upsert: true, runValidators: true }
         );
 
         res.status(200).json({ message: 'Snapshot uploaded', sessionId: session._id });
     } catch (error) {
-        console.error('Snapshot upload error:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Snapshot upload error detail:', {
+            message: error.message,
+            stack: error.stack,
+            body: { ...req.body, snapshot: req.body.snapshot ? '(base64)' : 'missing' }
+        });
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
@@ -46,20 +54,28 @@ export const uploadIdSnapshot = async (req, res) => {
         const { examId, attemptId, idSnapshot, kycData } = req.body;
         const userId = req.user.id;
 
+        console.log(`[Proctor] Receiving ID upload for exam: ${examId}, attempt: ${attemptId}, user: ${userId}`);
+
         if (!examId || !attemptId || !idSnapshot) {
+            console.error('[Proctor] ID Upload failed: Missing required fields', { examId, attemptId, idSnapshot: !!idSnapshot });
             return res.status(400).json({ message: 'Missing examId, attemptId or idSnapshot' });
         }
 
         const session = await ProctorSession.findOneAndUpdate(
-            { userId, examId, attemptId },
+            { userId: req.user._id, examId, attemptId },
             { idSnapshot, kycData, verificationStatus: 'pending', lastUpdated: Date.now() },
-            { new: true, upsert: true }
+            { new: true, upsert: true, runValidators: true }
         );
 
+        console.log(`[Proctor] ID upload successful for user: ${userId}, Session: ${session._id}`);
         res.status(200).json({ message: 'ID uploaded', sessionId: session._id });
     } catch (error) {
-        console.error('ID upload error:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('ID upload error detail:', {
+            message: error.message,
+            stack: error.stack,
+            body: { ...req.body, idSnapshot: req.body.idSnapshot ? '(base64)' : 'missing' }
+        });
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
