@@ -17,6 +17,10 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import liveClassRoutes from "./routes/liveClassRoutes.js";
 import certificationRoutes from "./routes/certificationRoutes.js";
+import careerRoutes from "./routes/careerRoutes.js";
+import industryRoutes from "./routes/industryRoutes.js";
+import resourceRoutes from "./routes/resourceRoutes.js";
+import partnershipRoutes from "./routes/partnershipRoutes.js";
 import { Server } from "socket.io";
 import http from "http";
 
@@ -66,6 +70,10 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/live-class", liveClassRoutes);
 app.use("/api/certifications", certificationRoutes);
+app.use("/api/careers", careerRoutes);
+app.use("/api/industries", industryRoutes);
+app.use("/api/resources", resourceRoutes);
+app.use("/api/partnerships", partnershipRoutes);
 
 // Socket.io Logic
 io.on("connection", (socket) => {
