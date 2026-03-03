@@ -92,6 +92,13 @@ io.on("connection", (socket) => {
         console.log(`[Socket] Socket ${socket.id} joined course room course_${courseId}`);
     });
 
+    // Proctor joins an exam-specific room for real-time alerts (like new ID uploads)
+    socket.on("join_proctor_exam", ({ examId }) => {
+        const room = `proctor_exam_${examId}`;
+        socket.join(room);
+        console.log(`[Socket] Proctor joined room ${room}`);
+    });
+
     socket.on("send_message", (data) => {
         const { room, ...messageData } = data;
         io.to(room).emit("receive_message", messageData);

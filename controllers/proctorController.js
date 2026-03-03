@@ -65,10 +65,25 @@ export const uploadIdSnapshot = async (req, res) => {
             { userId: req.user._id, examId, attemptId },
             { idSnapshot, kycData, verificationStatus: 'pending', lastUpdated: Date.now() },
             { new: true, upsert: true, runValidators: true }
-        );
+        ).populate('userId', 'firstName lastName');
 
         console.log(`[Proctor] ID upload successful for user: ${userId}, Session: ${session._id}`);
-        res.status(200).json({ message: 'ID uploaded', sessionId: session._id });
+
+        // Notify proctor in real-time
+        const io = req.app.get('io');
+        if (io) {
+            const proctorRoom = `proctor_exam_${examId}`;
+            io.to(proctorRoom).emit('new_id_verification', {
+                userId,
+                examId,
+                attemptId,
+                studentName: `${session.userId?.firstName || ''} ${session.userId?.lastName || ''}`.trim(),
+                sessionId: session._id
+            });
+            console.log(`[Socket] Emitted new_id_verification to room ${proctorRoom}`);
+        }
+
+        res.status(200).json({ message: "ID Snapshot uploaded successfully", session });
     } catch (error) {
         console.error('ID upload error detail:', {
             message: error.message,
