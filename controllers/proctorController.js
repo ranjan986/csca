@@ -1,5 +1,30 @@
 import mongoose from 'mongoose';
 import ProctorSession from '../models/ProctorSession.js';
+import { v2 as cloudinary } from 'cloudinary';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Helper to upload base64 to Cloudinary
+const uploadToBase64 = async (base64String, folder = 'proctor-snapshots') => {
+    try {
+        const result = await cloudinary.uploader.upload(base64String, {
+            folder: folder,
+            resource_type: 'image'
+        });
+        return result.secure_url;
+    } catch (error) {
+        console.error('[Cloudinary] Upload error:', error);
+        throw new Error('Failed to upload image to cloud storage');
+    }
+};
 
 // Upload Snapshot
 export const uploadSnapshot = async (req, res) => {
@@ -8,11 +33,14 @@ export const uploadSnapshot = async (req, res) => {
         const userId = req.user?._id;
 
         if (!userId) return res.status(401).json({ message: 'User not authenticated' });
-        if (!examId || !attemptId || !snapshot) return res.status(400).json({ message: 'Missing examId, attemptId or snapshot' });
+        if (!examId || !attemptId || !snapshot) return res.status(400).json({ message: 'Missing required fields' });
         if (!mongoose.Types.ObjectId.isValid(examId)) return res.status(400).json({ message: 'Invalid examId format' });
 
+        // Upload to Cloudinary instead of storing base64
+        const imageUrl = await uploadToBase64(snapshot, `proctor/exams/${examId}/snapshots`);
+
         const filter = { userId, examId, attemptId };
-        const update = { lastSnapshot: snapshot, lastUpdated: Date.now() };
+        const update = { lastSnapshot: imageUrl, lastUpdated: Date.now() };
         const options = { new: true, upsert: true, runValidators: true };
 
         let session;
@@ -20,15 +48,18 @@ export const uploadSnapshot = async (req, res) => {
             session = await ProctorSession.findOneAndUpdate(filter, update, options);
         } catch (error) {
             if (error.code === 11000) {
-                // Race condition: retry once if document was just created by another process
-                console.warn('[Proctor] Snapshot upsert race condition detected, retrying...');
                 session = await ProctorSession.findOneAndUpdate(filter, update, options);
             } else {
                 throw error;
             }
         }
 
-        res.status(200).json({ message: 'Snapshot uploaded', sessionId: session._id });
+        // Return only the URL and basic info to keep response size small (Vercel limit)
+        res.status(200).json({
+            message: 'Snapshot uploaded',
+            url: imageUrl,
+            sessionId: session._id
+        });
     } catch (error) {
         console.error('[Proctor] Snapshot upload error:', error);
         res.status(500).json({ message: 'Server error during snapshot upload', error: error.message });
@@ -38,8 +69,6 @@ export const uploadSnapshot = async (req, res) => {
 // Get Active Sessions for an Exam (Admin only)
 export const getActiveSessions = async (req, res) => {
     try {
-        // Optional: Check if req.user.role === 'admin'
-
         const sessions = await ProctorSession.find({ examId: req.params.examId })
             .populate('userId', 'firstName lastName email')
             .sort({ lastUpdated: -1 });
@@ -58,11 +87,14 @@ export const uploadIdSnapshot = async (req, res) => {
         const userId = req.user?._id;
 
         if (!userId) return res.status(401).json({ message: 'User not authenticated' });
-        if (!examId || !attemptId || !idSnapshot) return res.status(400).json({ message: 'Missing examId, attemptId or idSnapshot' });
+        if (!examId || !attemptId || !idSnapshot) return res.status(400).json({ message: 'Missing required fields' });
         if (!mongoose.Types.ObjectId.isValid(examId)) return res.status(400).json({ message: 'Invalid examId format' });
 
+        // Upload ID to Cloudinary
+        const idUrl = await uploadToBase64(idSnapshot, `proctor/exams/${examId}/ids`);
+
         const filter = { userId, examId, attemptId };
-        const update = { idSnapshot, kycData, verificationStatus: 'pending', lastUpdated: Date.now() };
+        const update = { idSnapshot: idUrl, kycData, verificationStatus: 'pending', lastUpdated: Date.now() };
         const options = { new: true, upsert: true, runValidators: true };
 
         let session;
@@ -70,7 +102,6 @@ export const uploadIdSnapshot = async (req, res) => {
             session = await ProctorSession.findOneAndUpdate(filter, update, options).populate('userId', 'firstName lastName');
         } catch (error) {
             if (error.code === 11000) {
-                console.warn('[Proctor] ID upload upsert race condition detected, retrying...');
                 session = await ProctorSession.findOneAndUpdate(filter, update, options).populate('userId', 'firstName lastName');
             } else {
                 throw error;
@@ -79,7 +110,7 @@ export const uploadIdSnapshot = async (req, res) => {
 
         if (!session) throw new Error("Failed to create or update proctor session");
 
-        // Notify proctor in real-time
+        // Notify proctor in real-time with the URL
         const io = req.app.get('io');
         if (io) {
             const proctorRoom = `proctor_exam_${examId}`;
@@ -89,12 +120,16 @@ export const uploadIdSnapshot = async (req, res) => {
                 attemptId,
                 studentName: `${session.userId?.firstName || ''} ${session.userId?.lastName || ''}`.trim(),
                 sessionId: session._id,
-                idSnapshot,
+                idSnapshot: idUrl, // This is now a Cloudinary URL
                 kycData
             });
         }
 
-        res.status(200).json({ message: "ID Snapshot uploaded successfully", session });
+        res.status(200).json({
+            message: "ID Snapshot uploaded successfully",
+            url: idUrl,
+            sessionId: session._id
+        });
     } catch (error) {
         console.error('[Proctor] ID upload error:', error);
         res.status(500).json({ message: 'Server error during ID upload', error: error.message });
