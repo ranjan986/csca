@@ -67,8 +67,6 @@ export const uploadIdSnapshot = async (req, res) => {
             { new: true, upsert: true, runValidators: true }
         ).populate('userId', 'firstName lastName');
 
-        console.log(`[Proctor] ID upload successful for user: ${userId}, Session: ${session._id}`);
-
         // Notify proctor in real-time
         const io = req.app.get('io');
         if (io) {
@@ -78,11 +76,14 @@ export const uploadIdSnapshot = async (req, res) => {
                 examId,
                 attemptId,
                 studentName: `${session.userId?.firstName || ''} ${session.userId?.lastName || ''}`.trim(),
-                sessionId: session._id
+                sessionId: session._id,
+                idSnapshot,
+                kycData
             });
             console.log(`[Socket] Emitted new_id_verification to room ${proctorRoom}`);
         }
 
+        console.log(`[Proctor] ID upload successful for user: ${userId}, Session: ${session._id}`);
         res.status(200).json({ message: "ID Snapshot uploaded successfully", session });
     } catch (error) {
         console.error('ID upload error detail:', {
@@ -130,7 +131,7 @@ export const verifyId = async (req, res) => {
 export const getMySession = async (req, res) => {
     try {
         const session = await ProctorSession.findOne({
-            userId: req.user.id,
+            userId: req.user._id,
             examId: req.params.examId,
             attemptId: req.params.attemptId
         });
