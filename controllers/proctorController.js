@@ -5,30 +5,47 @@ import ProctorSession from '../models/ProctorSession.js';
 export const uploadSnapshot = async (req, res) => {
     try {
         const { examId, attemptId, snapshot } = req.body;
-        const userId = req.user.id;
+        const userId = req.user?._id;
 
-        console.log(`[Proctor] Receiving snapshot for exam: ${examId}, attempt: ${attemptId}, user: ${userId}`);
+        if (!userId) {
+            return res.status(401).json({ message: 'User not authenticated' });
+        }
 
         if (!examId || !attemptId || !snapshot) {
-            console.error('[Proctor] Upload failed: Missing required fields', { examId, attemptId, snapshot: !!snapshot });
             return res.status(400).json({ message: 'Missing examId, attemptId or snapshot' });
         }
 
-        // upsert: true -> create if not exists, update if exists
+        // Validate ObjectId format for examId to prevent CastError
+        if (!mongoose.Types.ObjectId.isValid(examId)) {
+            return res.status(400).json({ message: 'Invalid examId format' });
+        }
+
+        console.log(`[Proctor] Snapshot update for exam: ${examId}, attempt: ${attemptId}, user: ${userId}`);
+
         const session = await ProctorSession.findOneAndUpdate(
-            { userId: req.user._id, examId, attemptId },
+            { userId: userId, examId, attemptId },
             { lastSnapshot: snapshot, lastUpdated: Date.now() },
             { new: true, upsert: true, runValidators: true }
         );
 
         res.status(200).json({ message: 'Snapshot uploaded', sessionId: session._id });
     } catch (error) {
-        console.error('Snapshot upload error detail:', {
+        console.error('[Proctor] Snapshot upload error:', {
             message: error.message,
-            stack: error.stack,
-            body: { ...req.body, snapshot: req.body.snapshot ? '(base64)' : 'missing' }
+            code: error.code,
+            stack: error.stack
         });
-        res.status(500).json({ message: 'Server error', error: error.message });
+
+        // Handle specific MongoDB errors
+        if (error.code === 11000) {
+            return res.status(409).json({ message: 'Duplicate session detection. Please try again.' });
+        }
+
+        res.status(500).json({
+            message: 'Server error during snapshot upload',
+            error: error.message,
+            type: error.name
+        });
     }
 };
 
@@ -52,27 +69,39 @@ export const getActiveSessions = async (req, res) => {
 export const uploadIdSnapshot = async (req, res) => {
     try {
         const { examId, attemptId, idSnapshot, kycData } = req.body;
-        const userId = req.user.id;
+        const userId = req.user?._id;
 
-        console.log(`[Proctor] Receiving ID upload for exam: ${examId}, attempt: ${attemptId}, user: ${userId}`);
+        if (!userId) {
+            return res.status(401).json({ message: 'User not authenticated' });
+        }
 
         if (!examId || !attemptId || !idSnapshot) {
-            console.error('[Proctor] ID Upload failed: Missing required fields', { examId, attemptId, idSnapshot: !!idSnapshot });
             return res.status(400).json({ message: 'Missing examId, attemptId or idSnapshot' });
         }
 
+        // Validate ObjectId format for examId to prevent CastError
+        if (!mongoose.Types.ObjectId.isValid(examId)) {
+            return res.status(400).json({ message: 'Invalid examId format' });
+        }
+
+        console.log(`[Proctor] ID Upload for exam: ${examId}, attempt: ${attemptId}, user: ${userId}`);
+
         const session = await ProctorSession.findOneAndUpdate(
-            { userId: req.user._id, examId, attemptId },
+            { userId: userId, examId, attemptId },
             { idSnapshot, kycData, verificationStatus: 'pending', lastUpdated: Date.now() },
             { new: true, upsert: true, runValidators: true }
         ).populate('userId', 'firstName lastName');
+
+        if (!session) {
+            throw new Error("Failed to create or update proctor session");
+        }
 
         // Notify proctor in real-time
         const io = req.app.get('io');
         if (io) {
             const proctorRoom = `proctor_exam_${examId}`;
             io.to(proctorRoom).emit('new_id_verification', {
-                userId,
+                userId: userId,
                 examId,
                 attemptId,
                 studentName: `${session.userId?.firstName || ''} ${session.userId?.lastName || ''}`.trim(),
@@ -86,12 +115,21 @@ export const uploadIdSnapshot = async (req, res) => {
         console.log(`[Proctor] ID upload successful for user: ${userId}, Session: ${session._id}`);
         res.status(200).json({ message: "ID Snapshot uploaded successfully", session });
     } catch (error) {
-        console.error('ID upload error detail:', {
+        console.error('[Proctor] ID upload error:', {
             message: error.message,
-            stack: error.stack,
-            body: { ...req.body, idSnapshot: req.body.idSnapshot ? '(base64)' : 'missing' }
+            code: error.code,
+            stack: error.stack
         });
-        res.status(500).json({ message: 'Server error', error: error.message });
+
+        if (error.code === 11000) {
+            return res.status(409).json({ message: 'Session already exists or is being updated. Please try again.' });
+        }
+
+        res.status(500).json({
+            message: 'Server error during ID upload',
+            error: error.message,
+            type: error.name
+        });
     }
 };
 
