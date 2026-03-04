@@ -31,7 +31,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:5173", "http://localhost:3000", "https://cscas.vercel.app", /\.vercel\.app$/],
+        origin: ["http://localhost:3000", "https://cscas.vercel.app", /\.vercel\.app$/],
         methods: ["GET", "POST"],
         credentials: true
     }
@@ -43,7 +43,6 @@ app.set("trust proxy", 1); // Trust first proxy (Render) for secure cookies
 app.use(cookieParser());
 
 const allowedOrigins = [
-    "http://localhost:5173",
     "http://localhost:3000",
     "https://cscas.vercel.app",
     /\.vercel\.app$/
